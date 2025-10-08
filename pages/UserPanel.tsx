@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../App';
-import { tasks, subscriptionPlans, dailyTaskLimit, PKR_PER_1000_POINTS } from '../data';
-import { Task, TaskCategory, Withdrawal } from '../types';
+import { tasks, subscriptionPlans, dailyTaskLimit } from '../data';
+import { Task, TaskCategory, Withdrawal, SubscriptionPlan } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { DollarSign, CheckCircle, Clock, Gift, Users, Star, ArrowRight, Filter, ArrowDownUp, Share2, Eye, Info, X, AlertTriangle } from 'lucide-react';
+import { DollarSign, CheckCircle, Clock, Gift, Users, Star, ArrowRight, Filter, ArrowDownUp, Share2, Eye, Info, X, AlertTriangle, ArrowLeft, Upload } from 'lucide-react';
 import SpinWheel from './SpinWheel';
 import TutorialModal from '../components/TutorialModal';
 import ProfilePage from './ProfilePage';
@@ -56,7 +56,7 @@ const DashboardCard = ({ title, value, icon, color }: { title: string, value: st
 }
 
 const UserDashboard = () => {
-    const { user } = useAuth();
+    const { user, pkrPer1000Points } = useAuth();
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
     useEffect(() => {
@@ -100,9 +100,9 @@ const UserDashboard = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {user?.name}!</h1>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <DashboardCard title="Total Points" value={user?.points.toLocaleString() || '0'} icon={Star} color="bg-yellow-500" />
-                <DashboardCard title="PKR Equivalent" value={`Rs ${((user?.points || 0) * (PKR_PER_1000_POINTS / 1000)).toFixed(0)}`} icon={DollarSign} color="bg-green-500" />
+                <DashboardCard title="PKR Equivalent" value={`Rs ${((user?.points || 0) * (pkrPer1000Points / 1000)).toFixed(0)}`} icon={DollarSign} color="bg-green-500" />
                 <DashboardCard title="Tasks Today" value={`${user?.tasksCompletedToday || 0} / ${dailyTaskLimit}`} icon={CheckCircle} color="bg-blue-500" />
-                <DashboardCard title="Referrals" value="3" icon={Users} color="bg-purple-500" />
+                <DashboardCard title="Referrals" value={user?.referralCount || 0} icon={Users} color="bg-purple-500" />
             </div>
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
@@ -292,14 +292,14 @@ const UserTasks = () => {
 };
 
 const UserWallet = () => {
-    const { user, updateUserPoints, requestWithdrawal, withdrawals, minWithdrawal, maxWithdrawal } = useAuth();
+    const { user, updateUserPoints, requestWithdrawal, withdrawals, minWithdrawal, maxWithdrawal, pkrPer1000Points } = useAuth();
     const [amountPKR, setAmountPKR] = useState(minWithdrawal);
     const [method, setMethod] = useState<'PayPal' | 'Easypaisa' | 'JazzCash'>(user?.preferredPaymentMethod || 'PayPal');
     const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
     const [withdrawalDetails, setWithdrawalDetails] = useState<{ amountPKR: number; points: number; method: string } | null>(null);
     const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-    const pointsNeeded = Math.ceil(amountPKR * (1000 / PKR_PER_1000_POINTS));
+    const pointsNeeded = Math.ceil(amountPKR * (1000 / pkrPer1000Points));
     const userWithdrawals = useMemo(() => withdrawals.filter(w => w.userId === user?.id).sort((a,b) => b.id - a.id), [withdrawals, user]);
     
     const statusColor = {
@@ -429,11 +429,11 @@ const UserWallet = () => {
                             <p className="text-gray-500 dark:text-gray-400">Points</p>
                         </div>
                         <div className="text-center">
-                             <p className="text-2xl font-semibold text-gray-800 dark:text-gray-200">Rs {((user?.points || 0) * (PKR_PER_1000_POINTS / 1000)).toFixed(2)}</p>
+                             <p className="text-2xl font-semibold text-gray-800 dark:text-gray-200">Rs {((user?.points || 0) * (pkrPer1000Points / 1000)).toFixed(2)}</p>
                              <p className="text-gray-500 dark:text-gray-400">PKR Equivalent</p>
                         </div>
                         <div className="pt-4 text-sm text-center text-gray-600 border-t border-gray-200 dark:text-gray-300 dark:border-gray-700">
-                            <p>1,000 Points = Rs {PKR_PER_1000_POINTS}</p>
+                            <p>1,000 Points = Rs {pkrPer1000Points}</p>
                             <p>Minimum withdrawal: Rs {minWithdrawal.toLocaleString()}</p>
                             <p>Maximum withdrawal: Rs {maxWithdrawal.toLocaleString()}</p>
                         </div>
@@ -536,12 +536,11 @@ const UserWallet = () => {
 };
 
 const UserReferrals = () => {
-    const { user } = useAuth();
+    const { user, pointsPerReferral } = useAuth();
     const referralLink = `https://task.cash/ref/${user?.referralCode}`;
     
-    // Mock data for referral stats
-    const referralCount = 3;
-    const referralEarnings = 450;
+    const referralCount = user?.referralCount || 0;
+    const referralEarnings = referralCount * pointsPerReferral;
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(referralLink);
@@ -557,23 +556,19 @@ const UserReferrals = () => {
                     url: referralLink,
                 });
             } catch (error) {
-                // User cancelled the share or an error occurred
                 console.log('Share cancelled or failed', error);
             }
         } else {
-            // Fallback for desktop or unsupported browsers
             alert('Web Share API is not supported in your browser. Please copy the link manually.');
         }
     };
 
-    // Check if Web Share API is available to conditionally render the share button
     const canShare = typeof navigator.share === 'function';
 
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Refer & Earn</h1>
 
-            {/* Referral Stats */}
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="flex items-center p-6 bg-white rounded-lg shadow dark:bg-gray-800">
                     <div className="p-3 mr-4 text-green-500 bg-green-100 rounded-full dark:bg-green-900">
@@ -616,27 +611,100 @@ const UserReferrals = () => {
     )
 };
 
+const PaymentPage = () => {
+    const { planId } = useParams<{ planId: string }>();
+    const { adminPaymentDetails, requestPremiumUpgrade } = useAuth();
+    const navigate = useNavigate();
+    const [receiptUrl, setReceiptUrl] = useState('');
+
+    const plan = subscriptionPlans.find(p => p.id === planId);
+    
+    if (!plan) {
+        return (
+            <div>
+                <h1 className="text-2xl font-bold">Plan not found</h1>
+                <Link to="/user/subscription" className="text-primary-600">Go back</Link>
+            </div>
+        );
+    }
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if(!receiptUrl) {
+            alert("Please provide a receipt URL.");
+            return;
+        }
+        requestPremiumUpgrade(plan.id, receiptUrl);
+        alert("Your upgrade request has been submitted. It will be reviewed by an administrator shortly.");
+        navigate('/user/subscription');
+    };
+
+    return (
+        <div className="space-y-6">
+             <button onClick={() => navigate('/user/subscription')} className="inline-flex items-center mb-4 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Subscription Plans
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Upgrade to {plan.name}</h1>
+            
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <div className="p-6 space-y-4 bg-white rounded-lg shadow dark:bg-gray-800">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Payment Instructions</h2>
+                    <p className="text-gray-600 dark:text-gray-400">
+                        To upgrade your account, please send <span className="font-bold">Rs {plan.pricePKR.toLocaleString()}</span> to one of the following accounts.
+                    </p>
+                    <div className="p-4 space-y-2 border rounded-md dark:border-gray-700">
+                        <h3 className="font-semibold text-gray-800 dark:text-gray-200">Easypaisa Details</h3>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap dark:text-gray-400">{adminPaymentDetails.Easypaisa}</p>
+                    </div>
+                     <div className="p-4 space-y-2 border rounded-md dark:border-gray-700">
+                        <h3 className="font-semibold text-gray-800 dark:text-gray-200">JazzCash Details</h3>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap dark:text-gray-400">{adminPaymentDetails.JazzCash}</p>
+                    </div>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                        After making the payment, please upload a screenshot or provide the URL of your receipt in the form.
+                    </p>
+                </div>
+
+                <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white">Submit Your Receipt</h2>
+                    <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                        <div>
+                            <label htmlFor="receiptUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Payment Receipt URL</label>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Upload your receipt to a service like Imgur and paste the link here.</p>
+                            <div className="relative">
+                                <Upload className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 -translate-y-1/2" />
+                                <input 
+                                    type="url"
+                                    id="receiptUrl"
+                                    value={receiptUrl}
+                                    onChange={(e) => setReceiptUrl(e.target.value)}
+                                    placeholder="https://i.imgur.com/your-receipt.png"
+                                    required
+                                    className="w-full py-2 pl-10 pr-3 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+                                />
+                            </div>
+                        </div>
+                        <button type="submit" className="w-full px-4 py-2 font-bold text-white rounded-md bg-primary-600 hover:bg-primary-700">
+                            Submit for Review
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 const UserSubscription = () => {
-    const { user, upgradeToPremium } = useAuth();
+    const { user, upgradeRequests } = useAuth();
+    const navigate = useNavigate();
+
+    const pendingRequest = upgradeRequests.find(req => req.userId === user?.id && req.status === 'pending');
 
     const handleUpgrade = () => {
         const premiumPlan = subscriptionPlans.find(p => p.id === 'premium');
         if (!premiumPlan) return;
-        
-        const costInPoints = Math.ceil(premiumPlan.pricePKR * (1000 / PKR_PER_1000_POINTS));
-
-        const confirmation = window.confirm(
-            `Are you sure you want to upgrade to Premium?\nThis will cost ${costInPoints.toLocaleString()} points.`
-        );
-
-        if (confirmation) {
-            const success = upgradeToPremium('premium');
-            if (success) {
-                alert('Congratulations! You are now a Premium Member.');
-            } else {
-                alert('Upgrade failed. You do not have enough points.');
-            }
-        }
+        navigate(`/user/subscription/payment/${premiumPlan.id}`);
     };
 
     return (
@@ -644,21 +712,14 @@ const UserSubscription = () => {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Subscription</h1>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                 {subscriptionPlans.map(plan => {
-                    const costInPoints = Math.ceil(plan.pricePKR * (1000 / PKR_PER_1000_POINTS));
-
                     return (
                         <div key={plan.id} className={`p-8 border rounded-lg shadow-lg flex flex-col ${user?.isPremium && plan.id === 'premium' ? 'border-primary-500' : 'dark:border-gray-700'}`}>
                             <div className="flex-grow">
                                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{plan.name}</h2>
                                 <p className="mt-4 text-4xl font-extrabold text-gray-900 dark:text-white">
                                     {plan.pricePKR > 0 ? `Rs ${plan.pricePKR}` : 'Free'}
-                                    <span className="text-base font-medium text-gray-500 dark:text-gray-400"> / month</span>
+                                    <span className="text-base font-medium text-gray-500 dark:text-gray-400"> / one-time</span>
                                 </p>
-                                {plan.pricePKR > 0 && (
-                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        or {costInPoints.toLocaleString()} points
-                                    </p>
-                                )}
                                 <ul className="mt-6 space-y-4">
                                     {plan.features.map(feature => (
                                         <li key={feature} className="flex items-start">
@@ -673,8 +734,12 @@ const UserSubscription = () => {
                                     user?.isPremium ? (
                                         <button disabled className="w-full py-3 font-semibold text-white rounded-lg bg-primary-600 opacity-70">Current Plan</button>
                                     ) : (
-                                        <button onClick={handleUpgrade} className="w-full py-3 font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-700">
-                                            Upgrade Now
+                                        <button 
+                                            onClick={handleUpgrade}
+                                            disabled={!!pendingRequest}
+                                            className="w-full py-3 font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                                        >
+                                            {pendingRequest ? 'Upgrade Pending Review' : 'Upgrade Now'}
                                         </button>
                                     )
                                 ) : (
@@ -703,6 +768,7 @@ const UserPanel = () => {
                 <Route path="/referrals" element={<UserReferrals />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/subscription" element={<UserSubscription />} />
+                <Route path="/subscription/payment/:planId" element={<PaymentPage />} />
             </Routes>
         </Layout>
     );

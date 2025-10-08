@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../App';
-import { Clock, Star } from 'lucide-react';
+import { Clock, Star, Gift, X } from 'lucide-react';
 
 const segments = [
     { label: '50', value: 50, color: 'bg-blue-500' },
@@ -23,6 +23,7 @@ const SpinWheel: React.FC = () => {
     const [canSpin, setCanSpin] = useState(false);
     const [timeLeft, setTimeLeft] = useState('');
     const [spinResult, setSpinResult] = useState<{ value: number; label: string } | null>(null);
+    const [isPrizeModalOpen, setIsPrizeModalOpen] = useState(false);
 
     useEffect(() => {
         const lastSpinTime = localStorage.getItem(LAST_SPIN_TIMESTAMP_KEY);
@@ -71,14 +72,10 @@ const SpinWheel: React.FC = () => {
         const winningSegmentIndex = Math.floor(Math.random() * segments.length);
         const segmentAngle = 360 / segments.length;
         
-        // Calculate the angle to the middle of the winning segment.
         const winningSegmentMiddleAngle = (winningSegmentIndex * segmentAngle) + (segmentAngle / 2);
-        // The wheel needs to rotate so that the winning segment's middle angle is at the top (0 degrees).
-        // A positive rotation is clockwise. To bring a point at angle `A` to the top, we need to rotate by `-A`.
-        // We calculate the final position within a 360-degree circle.
         const targetAngle = 360 - winningSegmentMiddleAngle;
 
-        const fullRotations = 360 * 8; // More rotations for a longer spin
+        const fullRotations = 360 * 8; 
         const finalRotation = fullRotations + targetAngle;
         
         setRotation(prev => prev - (prev % 360) + finalRotation);
@@ -94,6 +91,8 @@ const SpinWheel: React.FC = () => {
             setCanSpin(false);
             updateTimer(SPIN_COOLDOWN_MS);
 
+            setIsPrizeModalOpen(true);
+
              const interval = setInterval(() => {
                 const now = Date.now();
                 const lastSpinTime = parseInt(localStorage.getItem(LAST_SPIN_TIMESTAMP_KEY) || '0', 10);
@@ -107,7 +106,7 @@ const SpinWheel: React.FC = () => {
                 }
             }, 1000);
 
-        }, 7000); // Corresponds to animation duration
+        }, 7000); 
     };
     
     const conicGradient = useMemo(() => {
@@ -115,7 +114,6 @@ const SpinWheel: React.FC = () => {
          const gradientParts = segments.map((seg, i) => {
              const startAngle = i * segmentAngle;
              const endAngle = (i + 1) * segmentAngle;
-             // We need to resolve tailwind colors to hex/rgb for the gradient
              const colorMap: { [key: string]: string } = {
                  'bg-blue-500': '#3b82f6', 'bg-gray-500': '#6b7280', 'bg-green-500': '#22c55e',
                  'bg-yellow-500': '#eab308', 'bg-purple-500': '#a855f7', 'bg-indigo-500': '#6366f1',
@@ -132,13 +130,27 @@ const SpinWheel: React.FC = () => {
             <div className="flex flex-col items-center justify-center p-6 bg-white rounded-lg shadow dark:bg-gray-800">
                 <div className="relative flex items-center justify-center w-80 h-80 md:w-96 md:h-96">
                     <div 
-                        className="absolute w-full h-full rounded-full border-8 border-gray-300 dark:border-gray-600 shadow-lg"
+                        className="absolute text-primary-500 top-0 left-1/2 -translate-x-1/2 -translate-y-2 z-20 drop-shadow-lg"
+                        style={{ clipPath: 'polygon(50% 100%, 0 0, 100% 0)', width: '30px', height: '40px', backgroundColor: 'currentColor' }}
+                    />
+                    <div 
+                        className="absolute w-full h-full rounded-full"
                         style={{ 
                             background: conicGradient,
                             transition: 'transform 7s cubic-bezier(0.215, 0.61, 0.355, 1)',
                             transform: `rotate(${rotation}deg)`
                         }}
                     >
+                        {segments.map((_, index) => (
+                            <div
+                                key={`divider-${index}`}
+                                className="absolute top-0 left-0 w-full h-full"
+                                style={{ transform: `rotate(${(360 / segments.length) * index}deg)` }}
+                            >
+                                <div className="h-1/2 w-px bg-white/30 mx-auto"></div>
+                            </div>
+                        ))}
+
                          {segments.map((segment, index) => {
                             const angle = (360 / segments.length) * (index + 0.5);
                             return (
@@ -147,23 +159,18 @@ const SpinWheel: React.FC = () => {
                                     className="absolute top-0 left-0 w-full h-full"
                                     style={{ transform: `rotate(${angle}deg)` }}
                                 >
-                                    <div className="absolute flex items-center justify-center w-1/2 h-12 text-white font-bold text-lg -translate-y-1/2 top-1/2 left-1/2 origin-left">
-                                        <span>{segment.label}</span>
+                                    <div className="absolute flex items-center justify-center w-[45%] text-white font-bold text-base -translate-y-1/2 top-1/2 left-1/2 origin-left">
+                                        {segment.value > 0 ? (
+                                            <span className="flex items-center gap-1.5"><Star className="w-4 h-4 text-yellow-300 fill-current" /> {segment.label}</span>
+                                        ) : (
+                                            <span>{segment.label}</span>
+                                        )}
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-                    <div className="absolute w-8 h-8 bg-white border-4 border-gray-300 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 dark:bg-gray-700 dark:border-gray-500"></div>
-                     <div 
-                        className="absolute text-primary-500 top-0 left-1/2 -translate-x-1/2 -translate-y-full"
-                        style={{
-                            clipPath: 'polygon(50% 100%, 0 0, 100% 0)',
-                            width: '30px',
-                            height: '40px',
-                            backgroundColor: 'currentColor'
-                        }}
-                    ></div>
+                    <div className="absolute w-12 h-12 bg-white border-4 border-gray-300 rounded-full top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 dark:bg-gray-700 dark:border-gray-500 shadow-inner"></div>
                 </div>
 
                 <div className="mt-8 text-center">
@@ -180,14 +187,33 @@ const SpinWheel: React.FC = () => {
                            Next spin available in: {timeLeft}
                         </div>
                     )}
-                     {spinResult && !isSpinning && (
-                        <div className="flex items-center justify-center p-3 mt-4 text-lg font-semibold text-green-700 bg-green-100 rounded-md dark:bg-green-900 dark:text-green-300">
-                           <Star className="w-6 h-6 mr-2" />
-                           {spinResult.value > 0 ? `Congratulations! You won ${spinResult.value} points!` : `Better luck next time!`}
-                        </div>
-                    )}
                 </div>
             </div>
+            {isPrizeModalOpen && spinResult && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 animate-fade-in-up">
+                    <div className="relative w-full max-w-sm p-8 mx-4 text-center bg-white rounded-2xl shadow-xl dark:bg-gray-800">
+                        <div className={`flex items-center justify-center w-20 h-20 mx-auto -mt-20 rounded-full border-4 border-white dark:border-gray-800 ${spinResult.value > 0 ? 'bg-green-500' : 'bg-red-500'}`}>
+                            {spinResult.value > 0 ? <Gift className="w-10 h-10 text-white" /> : <X className="w-10 h-10 text-white" />}
+                        </div>
+                        <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
+                            {spinResult.value > 0 ? `Congratulations!` : 'Oh No!'}
+                        </h2>
+                        <p className="mt-2 text-lg text-gray-700 dark:text-gray-300">
+                            {spinResult.value > 0 ? (
+                                <>You've won <span className="font-bold text-primary-500">{spinResult.value} points!</span></>
+                            ) : (
+                                "Better luck next time. Try again tomorrow!"
+                            )}
+                        </p>
+                        <button
+                            onClick={() => setIsPrizeModalOpen(false)}
+                            className="w-full px-4 py-3 mt-8 font-semibold text-white rounded-lg bg-primary-600 hover:bg-primary-700"
+                        >
+                            Awesome!
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

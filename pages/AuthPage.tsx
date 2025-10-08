@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Gift } from 'lucide-react';
 
 const AuthPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +10,7 @@ const AuthPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -28,7 +29,7 @@ const AuthPage: React.FC = () => {
         setError('Passwords do not match.');
         return;
       }
-      const success = signup(email, password);
+      const success = signup(email, password, referralCode);
       if (!success) {
         setError('An account with this email already exists.');
       }
@@ -42,6 +43,7 @@ const AuthPage: React.FC = () => {
       setEmail('');
       setPassword('');
       setConfirmPassword('');
+      setReferralCode('');
   }
 
   return (
@@ -106,6 +108,7 @@ const AuthPage: React.FC = () => {
             </div>
 
             {!isLogin && (
+                <>
                  <div className="relative">
                     <Lock className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 -translate-y-1/2" />
                     <input
@@ -123,6 +126,19 @@ const AuthPage: React.FC = () => {
                         {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                 </div>
+                <div className="relative">
+                    <Gift className="absolute w-5 h-5 text-gray-400 left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                        id="referral-code"
+                        name="referral-code"
+                        type="text"
+                        className="w-full py-3 pl-10 pr-4 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                        placeholder="Referral Code (Optional)"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value)}
+                    />
+                </div>
+                </>
             )}
             
             {error && <p className="text-xs text-center text-red-500">{error}</p>}

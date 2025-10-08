@@ -1,11 +1,12 @@
+
 import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../App';
 import { tasks as initialTasks } from '../data';
-import { User, Task, Withdrawal, TaskCategory } from '../types';
+import { User, Task, Withdrawal, TaskCategory, UpgradeRequest } from '../types';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, LineChart, Line } from 'recharts';
-import { DollarSign, Users, CheckSquare, Clock, Plus, Edit, Trash2, X as XIcon, Shield, AlertTriangle, Info } from 'lucide-react';
+import { DollarSign, Users, CheckSquare, Clock, Plus, Edit, Trash2, X as XIcon, Shield, AlertTriangle, Info, Save, Eye } from 'lucide-react';
 
 
 const DashboardCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: React.ElementType, color: string }) => {
@@ -609,10 +610,81 @@ const ManageWithdrawals = () => {
     );
 };
 
+const ManageSubscriptions = () => {
+    const { hasPermission, upgradeRequests, updateUpgradeRequestStatus } = useAuth();
+    if (!hasPermission('manage_subscriptions')) return <AccessDenied />;
+
+    const statusColor = {
+        pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+        approved: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+        declined: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+    };
+
+    return (
+        <div className="space-y-4">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage Subscriptions</h1>
+            <div className="overflow-x-auto bg-white rounded-lg shadow dark:bg-gray-800">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                     <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">User</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Plan</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Price (PKR)</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Date</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Receipt</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Status</th>
+                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-300">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
+                        {upgradeRequests.map(req => (
+                            <tr key={req.id}>
+                                <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap dark:text-white">{req.userName}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-300">{req.planName}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-300">Rs {req.pricePKR.toLocaleString()}</td>
+                                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-300">{req.date}</td>
+                                <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                                    <a href={req.receiptUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary-600 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300">
+                                        <Eye className="w-4 h-4 mr-1"/> View
+                                    </a>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full capitalize ${statusColor[req.status]}`}>
+                                        {req.status}
+                                    </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
+                                    {req.status === 'pending' && (
+                                        <div className="flex space-x-2">
+                                            <button onClick={() => updateUpgradeRequestStatus(req.id, 'approved')} className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300">Approve</button>
+                                            <button onClick={() => updateUpgradeRequestStatus(req.id, 'declined')} className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300">Decline</button>
+                                        </div>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                        {upgradeRequests.length === 0 && (
+                            <tr><td colSpan={7} className="py-4 text-sm text-center text-gray-500">No subscription requests found.</td></tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+
 const AdminSettings = () => {
-    const { hasPermission, minWithdrawal, maxWithdrawal, updateWithdrawalLimits } = useAuth();
+    const { hasPermission, minWithdrawal, maxWithdrawal, updateWithdrawalLimits, pkrPer1000Points, updatePkrRate, pointsPerReferral, referralBonus, updateReferralSettings, adminPaymentDetails, updateAdminPaymentDetails } = useAuth();
+    
     const [min, setMin] = useState(minWithdrawal);
     const [max, setMax] = useState(maxWithdrawal);
+    const [rate, setRate] = useState(pkrPer1000Points);
+    const [refPoints, setRefPoints] = useState(pointsPerReferral);
+    const [bonusNeeded, setBonusNeeded] = useState(referralBonus.referralsNeeded);
+    const [bonusPoints, setBonusPoints] = useState(referralBonus.bonusPoints);
+    const [easypaisaDetails, setEasypaisaDetails] = useState(adminPaymentDetails.Easypaisa);
+    const [jazzcashDetails, setJazzcashDetails] = useState(adminPaymentDetails.JazzCash);
     const [saved, setSaved] = useState(false);
 
     if (!hasPermission('manage_settings')) return <AccessDenied />;
@@ -624,6 +696,9 @@ const AdminSettings = () => {
             return;
         }
         updateWithdrawalLimits(min, max);
+        updatePkrRate(rate);
+        updateReferralSettings(refPoints, { referralsNeeded: bonusNeeded, bonusPoints: bonusPoints });
+        updateAdminPaymentDetails({ Easypaisa: easypaisaDetails, JazzCash: jazzcashDetails });
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
     };
@@ -631,35 +706,73 @@ const AdminSettings = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Application Settings</h1>
-            <div className="max-w-lg p-6 bg-white rounded-lg shadow dark:bg-gray-800">
-                <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Withdrawal Limits</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="max-w-2xl">
+                 <form onSubmit={handleSubmit} className="p-8 space-y-8 bg-white rounded-lg shadow dark:bg-gray-800">
                     <div>
-                        <label htmlFor="minWithdrawal" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Withdrawal Amount (PKR)</label>
-                        <input
-                            type="number"
-                            id="minWithdrawal"
-                            value={min}
-                            onChange={(e) => setMin(Number(e.target.value))}
-                            className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            min="0"
-                        />
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Withdrawal Limits</h2>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Set the minimum and maximum withdrawal amounts in PKR.</p>
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <label htmlFor="minWithdrawal" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Withdrawal (PKR)</label>
+                                <input type="number" id="minWithdrawal" value={min} onChange={(e) => setMin(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                            </div>
+                            <div>
+                                <label htmlFor="maxWithdrawal" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Withdrawal (PKR)</label>
+                                <input type="number" id="maxWithdrawal" value={max} onChange={(e) => setMax(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <label htmlFor="maxWithdrawal" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Maximum Withdrawal Amount (PKR)</label>
-                        <input
-                            type="number"
-                            id="maxWithdrawal"
-                            value={max}
-                            onChange={(e) => setMax(Number(e.target.value))}
-                            className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                            min="0"
-                        />
+
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Point Conversion</h2>
+                         <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Define how many PKR are equivalent to 1,000 points.</p>
+                         <div className="mt-4">
+                            <label htmlFor="pkrRate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">PKR per 1,000 Points</label>
+                            <input type="number" id="pkrRate" value={rate} onChange={(e) => setRate(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                         </div>
                     </div>
-                    <div className="flex items-center justify-end">
-                        {saved && <p className="mr-4 text-sm text-green-600 dark:text-green-400">Settings saved!</p>}
-                        <button type="submit" className="px-4 py-2 font-bold text-white rounded-md bg-primary-600 hover:bg-primary-700">
-                            Save Settings
+                    
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Referral Settings</h2>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Configure rewards for user referrals.</p>
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <label htmlFor="refPoints" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Points per Referral</label>
+                                <input type="number" id="refPoints" value={refPoints} onChange={(e) => setRefPoints(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label htmlFor="bonusNeeded" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Daily Referrals for Bonus</label>
+                                    <input type="number" id="bonusNeeded" value={bonusNeeded} onChange={(e) => setBonusNeeded(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                                </div>
+                                <div>
+                                    <label htmlFor="bonusPoints" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus Points Amount</label>
+                                    <input type="number" id="bonusPoints" value={bonusPoints} onChange={(e) => setBonusPoints(Number(e.target.value))} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Payment Details for Upgrades</h2>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">This information will be shown to users who want to upgrade to premium.</p>
+                        <div className="mt-4 space-y-4">
+                            <div>
+                                <label htmlFor="easypaisaDetails" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Easypaisa Details</label>
+                                <textarea id="easypaisaDetails" value={easypaisaDetails} onChange={(e) => setEasypaisaDetails(e.target.value)} rows={3} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                            </div>
+                            <div>
+                                <label htmlFor="jazzcashDetails" className="block text-sm font-medium text-gray-700 dark:text-gray-300">JazzCash Details</label>
+                                <textarea id="jazzcashDetails" value={jazzcashDetails} onChange={(e) => setJazzcashDetails(e.target.value)} rows={3} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-end pt-5 border-t border-gray-200 dark:border-gray-700">
+                        {saved && <p className="mr-4 text-sm text-green-600 dark:text-green-400">Settings saved successfully!</p>}
+                        <button type="submit" className="inline-flex items-center px-4 py-2 font-bold text-white transition-colors rounded-md bg-primary-600 hover:bg-primary-700">
+                            <Save className="w-5 h-5 mr-2" />
+                            Save Changes
                         </button>
                     </div>
                 </form>
@@ -678,6 +791,7 @@ const AdminPanel = () => {
                 <Route path="/staff" element={<ManageStaff />} />
                 <Route path="/tasks" element={<ManageTasks />} />
                 <Route path="/withdrawals" element={<ManageWithdrawals />} />
+                <Route path="/subscriptions" element={<ManageSubscriptions />} />
                 <Route path="/settings" element={<AdminSettings />} />
             </Routes>
         </Layout>

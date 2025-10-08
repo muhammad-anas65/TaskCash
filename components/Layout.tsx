@@ -2,7 +2,7 @@
 import React, { useState, Fragment, useMemo } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { useAuth, useTheme } from '../App';
-import { Sun, Moon, LogOut, Menu, X, User as UserIcon, LayoutDashboard, CheckSquare, Wallet, Users, Settings, BarChart2, DollarSign, Gift, Shield, UserCog } from 'lucide-react';
+import { Sun, Moon, LogOut, Menu, X, User as UserIcon, LayoutDashboard, CheckSquare, Wallet, Users, Settings, BarChart2, DollarSign, Gift, Shield, UserCog, Crown } from 'lucide-react';
 
 interface NavItem {
   name: string;
@@ -27,6 +27,7 @@ const adminNavItems: NavItem[] = [
   { name: 'Staff', path: '/admin/staff', icon: Shield, permission: 'manage_staff' },
   { name: 'Tasks', path: '/admin/tasks', icon: CheckSquare, permission: 'manage_tasks' },
   { name: 'Withdrawals', path: '/admin/withdrawals', icon: DollarSign, permission: 'manage_withdrawals' },
+  { name: 'Subscriptions', path: '/admin/subscriptions', icon: Crown, permission: 'manage_subscriptions' },
   { name: 'Settings', path: '/admin/settings', icon: Settings, permission: 'manage_settings' },
 ];
 

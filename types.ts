@@ -16,6 +16,8 @@ export interface User {
   tasksCompletedToday?: number;
   lastTaskCompletionDate?: string;
   completedTaskIdsToday?: number[];
+  referralCount?: number;
+  referralsToday?: { date: string; count: number; };
 }
 
 export type AdminRole = 'Super Admin' | 'Marketing Manager' | 'Support Staff';
@@ -54,4 +56,16 @@ export interface SubscriptionPlan {
     pricePKR: number;
     features: string[];
     earningMultiplier: number;
+}
+
+export interface UpgradeRequest {
+  id: number;
+  userId: number;
+  userName: string;
+  planId: string;
+  planName: string;
+  pricePKR: number;
+  date: string;
+  status: 'pending' | 'approved' | 'declined';
+  receiptUrl: string;
 }
