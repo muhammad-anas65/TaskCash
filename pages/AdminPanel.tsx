@@ -38,12 +38,7 @@ const AdminDashboard = () => {
     const { hasPermission, users, withdrawals } = useAuth();
     if (!hasPermission('view_dashboard')) return <AccessDenied />;
 
-    const revenueData = [
-        { name: 'Jan', revenue: 4000 }, { name: 'Feb', revenue: 3000 },
-        { name: 'Mar', revenue: 5000 }, { name: 'Apr', revenue: 4500 },
-        { name: 'May', revenue: 6000 }, { name: 'Jun', revenue: 5500 },
-    ];
-     const userData = [
+    const userData = [
         { name: 'Jan', users: 120 }, { name: 'Feb', users: 150 },
         { name: 'Mar', users: 200 }, { name: 'Apr', users: 230 },
         { name: 'May', users: 280 }, { name: 'Jun', users: 320 },
@@ -51,26 +46,12 @@ const AdminDashboard = () => {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <DashboardCard title="Total Revenue" value="Rs 347,500" icon={DollarSign} color="bg-green-500" />
+             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 <DashboardCard title="Total Users" value={users.filter(u => u.role === 'user').length} icon={Users} color="bg-blue-500" />
                 <DashboardCard title="Active Tasks" value={initialTasks.length} icon={CheckSquare} color="bg-purple-500" />
                 <DashboardCard title="Pending Payouts" value={withdrawals.filter(w => w.status === 'pending').length} icon={Clock} color="bg-yellow-500" />
             </div>
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                 <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Revenue Overview</h3>
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={revenueData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.2)"/>
-                            <XAxis dataKey="name" tick={{ fill: 'rgb(156 163 175)' }}/>
-                            <YAxis tick={{ fill: 'rgb(156 163 175)' }}/>
-                            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '0.5rem' }}/>
-                            <Legend />
-                            <Bar dataKey="revenue" fill="#10b981" />
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
+            <div className="grid grid-cols-1 gap-6">
                  <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Growth</h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -238,6 +219,9 @@ const ManageTasks = () => {
     const [tasks, setTasks] = useState<Task[]>(initialTasks);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentTask, setCurrentTask] = useState<Partial<Task> | null>(null);
+    const [filterCategory, setFilterCategory] = useState<'all' | TaskCategory>('all');
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
     const openModalForNew = () => {
         setCurrentTask({
@@ -260,9 +244,20 @@ const ManageTasks = () => {
         setCurrentTask(null);
     };
 
-    const handleDelete = (taskId: number) => {
-        if (window.confirm('Are you sure you want to delete this task?')) {
-            setTasks(tasks.filter(task => task.id !== taskId));
+    const openDeleteModal = (task: Task) => {
+        setTaskToDelete(task);
+        setIsDeleteModalOpen(true);
+    };
+
+    const closeDeleteModal = () => {
+        setTaskToDelete(null);
+        setIsDeleteModalOpen(false);
+    };
+
+    const confirmDelete = () => {
+        if (taskToDelete) {
+            setTasks(tasks.filter(task => task.id !== taskToDelete.id));
+            closeDeleteModal();
         }
     };
 
@@ -290,15 +285,33 @@ const ManageTasks = () => {
             [name]: name === 'points' || name === 'durationSeconds' ? parseInt(value, 10) || 0 : value,
         });
     };
+
+    const filteredTasks = tasks.filter(task =>
+        filterCategory === 'all' || task.category === filterCategory
+    );
     
     return (
         <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="items-center justify-between md:flex">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Manage Tasks</h1>
-                <button onClick={openModalForNew} className="flex items-center px-4 py-2 font-bold text-white rounded-md bg-primary-600 hover:bg-primary-700">
-                    <Plus className="w-5 h-5 mr-2" />
-                    Add New Task
-                </button>
+                <div className="flex items-center mt-4 space-x-4 md:mt-0">
+                    <div className="flex items-center space-x-2">
+                         <label htmlFor="category-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter:</label>
+                        <select
+                            id="category-filter"
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value as 'all' | TaskCategory)}
+                            className="py-1 pl-2 pr-8 text-sm border-gray-300 rounded-md dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-primary-500 focus:border-primary-500"
+                        >
+                            <option value="all">All Categories</option>
+                            {Object.values(TaskCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        </select>
+                    </div>
+                    <button onClick={openModalForNew} className="flex items-center px-4 py-2 font-bold text-white rounded-md bg-primary-600 hover:bg-primary-700">
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Task
+                    </button>
+                </div>
             </div>
             <div className="overflow-x-auto bg-white rounded-lg shadow dark:bg-gray-800">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -312,7 +325,7 @@ const ManageTasks = () => {
                         </tr>
                     </thead>
                      <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                        {tasks.map(task => (
+                        {filteredTasks.map(task => (
                             <tr key={task.id}>
                                 <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap dark:text-white">{task.title}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-300">{task.category}</td>
@@ -320,10 +333,17 @@ const ManageTasks = () => {
                                 <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap dark:text-gray-300">{task.durationSeconds || 'N/A'}</td>
                                 <td className="px-6 py-4 space-x-2 text-sm font-medium whitespace-nowrap">
                                     <button onClick={() => openModalForEdit(task)} className="p-1 text-indigo-600 rounded-md hover:bg-indigo-100 dark:text-indigo-400 dark:hover:bg-gray-700"><Edit className="w-5 h-5"/></button>
-                                    <button onClick={() => handleDelete(task.id)} className="p-1 text-red-600 rounded-md hover:bg-red-100 dark:text-red-400 dark:hover:bg-gray-700"><Trash2 className="w-5 h-5"/></button>
+                                    <button onClick={() => openDeleteModal(task)} className="p-1 text-red-600 rounded-md hover:bg-red-100 dark:text-red-400 dark:hover:bg-gray-700"><Trash2 className="w-5 h-5"/></button>
                                 </td>
                             </tr>
                         ))}
+                        {filteredTasks.length === 0 && (
+                            <tr>
+                                <td colSpan={5} className="py-4 text-sm text-center text-gray-500">
+                                    No tasks found for the selected category.
+                                </td>
+                            </tr>
+                        )}
                     </tbody>
                 </table>
             </div>
@@ -381,6 +401,35 @@ const ManageTasks = () => {
                                 <button type="submit" className="px-4 py-2 font-bold text-white rounded-md bg-primary-600 hover:bg-primary-700">Save Task</button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+            {isDeleteModalOpen && taskToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-fade-in-up">
+                    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800">
+                        <div className="text-center">
+                            <div className="flex items-center justify-center w-12 h-12 mx-auto text-red-600 bg-red-100 rounded-full">
+                                <AlertTriangle className="w-7 h-7" />
+                            </div>
+                            <h2 className="mt-4 text-xl font-bold text-gray-900 dark:text-white">Confirm Deletion</h2>
+                            <p className="mt-2 text-gray-600 dark:text-gray-400">
+                                Are you sure you want to delete the task "{taskToDelete.title}"? This action cannot be undone.
+                            </p>
+                        </div>
+                        <div className="flex justify-center mt-6 space-x-4">
+                            <button 
+                                type="button" 
+                                onClick={closeDeleteModal} 
+                                className="px-6 py-2 font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">
+                                Cancel
+                            </button>
+                            <button 
+                                type="button" 
+                                onClick={confirmDelete} 
+                                className="px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700">
+                                Delete
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
