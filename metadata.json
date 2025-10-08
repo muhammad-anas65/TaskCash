@@ -1,0 +1,5 @@
+{
+  "name": "TaskCash",
+  "description": "A 'Make Money by Doing Tasks' platform where users can earn points by completing online activities. Points can be converted into real money. This application includes a user panel, admin panel, wallet system, and premium subscription features.",
+  "requestFramePermissions": []
+}
