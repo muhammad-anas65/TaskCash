@@ -5,7 +5,7 @@ import { useAuth } from '../App';
 import { tasks as initialTasks } from '../data';
 import { User, Task, Withdrawal, TaskCategory } from '../types';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Bar, LineChart, Line } from 'recharts';
-import { DollarSign, Users, CheckSquare, Clock, Plus, Edit, Trash2, X as XIcon, Shield, AlertTriangle } from 'lucide-react';
+import { DollarSign, Users, CheckSquare, Clock, Plus, Edit, Trash2, X as XIcon, Shield, AlertTriangle, Info } from 'lucide-react';
 
 
 const DashboardCard = ({ title, value, icon, color }: { title: string, value: string | number, icon: React.ElementType, color: string }) => {
@@ -336,28 +336,45 @@ const ManageTasks = () => {
                         </div>
                         <form onSubmit={handleSave} className="mt-4 space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
-                                <input type="text" name="title" value={currentTask.title} onChange={handleChange} className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required/>
+                                <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+                                <input type="text" id="title" name="title" value={currentTask.title} onChange={handleChange} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required/>
                             </div>
                              <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
-                                <select name="category" value={currentTask.category} onChange={handleChange} className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                                <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
+                                <select id="category" name="category" value={currentTask.category} onChange={handleChange} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                     {Object.values(TaskCategory).map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                 </select>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Points</label>
-                                    <input type="number" name="points" value={currentTask.points} onChange={handleChange} className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required min="0"/>
+                                    <label htmlFor="points" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Points</label>
+                                    <input type="number" id="points" name="points" value={currentTask.points} onChange={handleChange} className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" required min="0"/>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Duration (seconds)</label>
-                                    <input type="number" name="durationSeconds" value={currentTask.durationSeconds} onChange={handleChange} placeholder="Optional" className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
+                                    <label htmlFor="durationSeconds" className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Duration (seconds)
+                                        <div className="relative flex items-center ml-1.5 group">
+                                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                            <div className="absolute bottom-full left-1/2 z-10 w-64 p-2 mb-2 text-xs text-center text-white -translate-x-1/2 bg-gray-700 rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity">
+                                                Optional. Set a duration for tasks that require the user to stay on the page. Leave blank for none.
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <input type="number" id="durationSeconds" name="durationSeconds" value={currentTask.durationSeconds || ''} onChange={handleChange} placeholder="e.g., 30" className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" min="0"/>
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">URL</label>
-                                <input type="url" name="url" value={currentTask.url} onChange={handleChange} className="w-full mt-1 dark:bg-gray-700 dark:border-gray-600 dark:text-white" required/>
+                                <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300">URL</label>
+                                <input 
+                                    type="url" 
+                                    id="url" 
+                                    name="url" 
+                                    value={currentTask.url} 
+                                    onChange={handleChange} 
+                                    className="w-full mt-1 border-gray-300 rounded-md shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" 
+                                    placeholder="https://example.com"
+                                    required
+                                />
                             </div>
                             <div className="flex justify-end pt-4 space-x-2">
                                 <button type="button" onClick={closeModal} className="px-4 py-2 font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">Cancel</button>

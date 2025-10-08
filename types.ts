@@ -15,6 +15,7 @@ export interface User {
   paymentDetails?: string;
   tasksCompletedToday?: number;
   lastTaskCompletionDate?: string;
+  completedTaskIdsToday?: number[];
 }
 
 export type AdminRole = 'Super Admin' | 'Marketing Manager' | 'Support Staff';

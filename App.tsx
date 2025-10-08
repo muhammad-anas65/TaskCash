@@ -1,6 +1,7 @@
+
 import React, { useState, createContext, useContext, useMemo, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { users as mockUsers, withdrawals as mockWithdrawals, rolePermissions, subscriptionPlans, PKR_PER_1000_POINTS, MIN_WITHDRAWAL_PKR, MAX_WITHDRAWAL_PKR } from './data';
+import { users as mockUsers, withdrawals as mockWithdrawals, rolePermissions, subscriptionPlans, PKR_PER_1000_POINTS, MIN_WITHDRAWAL_PKR, MAX_WITHDRAWAL_PKR, dailyTaskLimit } from './data';
 import { User, AdminRole, Withdrawal, SubscriptionPlan } from './types';
 import AuthPage from './pages/AuthPage';
 import UserPanel from './pages/UserPanel';
@@ -36,7 +37,7 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   sendPasswordResetLink: (email: string) => boolean;
   resetPassword: (email: string, token: string, newPassword: string) => boolean;
-  recordTaskCompletion: () => boolean;
+  recordTaskCompletion: (taskId: number) => boolean;
   requestWithdrawal: (withdrawalRequest: Omit<Withdrawal, 'id' | 'userId' | 'userName' | 'status' | 'date'>) => void;
   updateWithdrawalStatus: (withdrawalId: number, status: 'approved' | 'declined', details?: { receiptUrl?: string; declineReason?: string }) => void;
   upgradeToPremium: (planId: string) => boolean;
@@ -148,23 +149,31 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         return userPermissions.includes(permission);
     };
     
-    const recordTaskCompletion = (): boolean => {
+    const recordTaskCompletion = (taskId: number): boolean => {
         if (!user) return false;
 
         const today = new Date().toISOString().split('T')[0];
-        const { tasksCompletedToday = 0, lastTaskCompletionDate } = user;
-        const dailyTaskLimit = 5; // This could be a global config
+        const { tasksCompletedToday = 0, lastTaskCompletionDate, completedTaskIdsToday = [] } = user;
 
         if (lastTaskCompletionDate === today) {
             if (tasksCompletedToday >= dailyTaskLimit) {
                 return false; // Limit reached
             }
-            const updatedUser = { ...user, tasksCompletedToday: tasksCompletedToday + 1 };
+             const updatedUser = { 
+                ...user, 
+                tasksCompletedToday: tasksCompletedToday + 1,
+                completedTaskIdsToday: [...completedTaskIdsToday, taskId]
+            };
             setUser(updatedUser);
             setUsers(currentUsers => currentUsers.map(u => u.id === user.id ? updatedUser : u));
         } else {
-            // First task of the day
-            const updatedUser = { ...user, tasksCompletedToday: 1, lastTaskCompletionDate: today };
+            // First task of a new day
+            const updatedUser = { 
+                ...user, 
+                tasksCompletedToday: 1, 
+                lastTaskCompletionDate: today,
+                completedTaskIdsToday: [taskId]
+            };
             setUser(updatedUser);
             setUsers(currentUsers => currentUsers.map(u => u.id === user.id ? updatedUser : u));
         }

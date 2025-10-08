@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import Layout from '../components/Layout';
@@ -144,7 +145,7 @@ const UserTasks = () => {
 
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
-        if (user?.lastTaskCompletionDate === today && user?.tasksCompletedToday >= dailyTaskLimit) {
+        if (user?.lastTaskCompletionDate === today && (user?.tasksCompletedToday || 0) >= dailyTaskLimit) {
             setLimitReached(true);
         } else {
             setLimitReached(false);
@@ -181,7 +182,7 @@ const UserTasks = () => {
             return;
         }
 
-        const canProceed = recordTaskCompletion();
+        const canProceed = recordTaskCompletion(task.id);
         if (!canProceed) {
             setLimitReached(true);
             alert("You have reached your daily task limit. Please come back tomorrow!");
@@ -242,27 +243,49 @@ const UserTasks = () => {
             </div>
 
              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                 {filteredTasks.map(task => (
-                     <div key={task.id} className={`flex flex-col justify-between p-6 bg-white rounded-lg shadow dark:bg-gray-800 ${limitReached ? 'opacity-50' : ''}`}>
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">{task.category}</span>
-                                <span className="flex items-center text-lg font-bold text-yellow-500">
-                                    <Star className="w-5 h-5 mr-1"/> {task.points * (user?.isPremium ? 2 : 1)}
-                                </span>
+                 {filteredTasks.map(task => {
+                     const isCompleted = user?.completedTaskIdsToday?.includes(task.id);
+                     return (
+                         <div key={task.id} className={`flex flex-col justify-between p-6 bg-white rounded-lg shadow dark:bg-gray-800 transition-opacity ${limitReached || isCompleted ? 'opacity-60' : ''}`}>
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">{task.category}</span>
+                                    <span className="flex items-center text-lg font-bold text-yellow-500">
+                                        <Star className="w-5 h-5 mr-1"/> {task.points * (user?.isPremium ? 2 : 1)}
+                                    </span>
+                                </div>
+                                <h3 className="flex items-center mb-2 text-xl font-bold text-gray-900 dark:text-white">
+                                    {task.title}
+                                    {isCompleted && <CheckCircle className="w-5 h-5 ml-2 text-green-500" />}
+                                </h3>
+                                {task.durationSeconds && (
+                                    <p className="flex items-center mb-4 text-sm text-gray-500 dark:text-gray-400">
+                                        <Clock className="w-4 h-4 mr-1"/> Duration: {task.durationSeconds} seconds
+                                    </p>
+                                )}
                             </div>
-                            <h3 className="mb-2 text-xl font-bold text-gray-900 dark:text-white">{task.title}</h3>
-                            {task.durationSeconds && (
-                                <p className="flex items-center mb-4 text-sm text-gray-500 dark:text-gray-400">
-                                    <Clock className="w-4 h-4 mr-1"/> Duration: {task.durationSeconds} seconds
-                                </p>
-                            )}
+                            <button 
+                                onClick={() => startTask(task)} 
+                                disabled={limitReached || isCompleted} 
+                                className={`flex items-center justify-center w-full px-4 py-2 mt-4 font-semibold text-white rounded-md transition-colors
+                                    ${isCompleted 
+                                        ? 'bg-green-600 cursor-not-allowed' 
+                                        : 'bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed dark:disabled:bg-gray-500'}
+                                `}
+                            >
+                                {isCompleted ? (
+                                    <>
+                                        <CheckCircle className="w-5 h-5 mr-2" /> Completed
+                                    </>
+                                ) : (
+                                    <>
+                                        Start Task <ArrowRight className="w-4 h-4 ml-2" />
+                                    </>
+                                )}
+                            </button>
                         </div>
-                        <button onClick={() => startTask(task)} disabled={limitReached} className="flex items-center justify-center w-full px-4 py-2 mt-4 font-semibold text-white rounded-md bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                            Start Task <ArrowRight className="w-4 h-4 ml-2" />
-                        </button>
-                    </div>
-                 ))}
+                     );
+                 })}
             </div>
         </div>
     );
