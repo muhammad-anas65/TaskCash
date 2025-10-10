@@ -44,6 +44,17 @@ const AdminDashboard = () => {
         { name: 'Mar', users: 200 }, { name: 'Apr', users: 230 },
         { name: 'May', users: 280 }, { name: 'Jun', users: 320 },
     ];
+
+    const dailyPointsData = [
+        { name: 'Mon', points: 1250 },
+        { name: 'Tue', points: 1800 },
+        { name: 'Wed', points: 1600 },
+        { name: 'Thu', points: 2200 },
+        { name: 'Fri', points: 2500 },
+        { name: 'Sat', points: 3100 },
+        { name: 'Sun', points: 2800 },
+    ];
+
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
@@ -52,7 +63,7 @@ const AdminDashboard = () => {
                 <DashboardCard title="Active Tasks" value={initialTasks.length} icon={CheckSquare} color="bg-purple-500" />
                 <DashboardCard title="Pending Payouts" value={withdrawals.filter(w => w.status === 'pending').length} icon={Clock} color="bg-yellow-500" />
             </div>
-            <div className="grid grid-cols-1 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                  <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Growth</h3>
                     <ResponsiveContainer width="100%" height={300}>
@@ -64,6 +75,19 @@ const AdminDashboard = () => {
                             <Legend />
                             <Line type="monotone" dataKey="users" stroke="#3b82f6" strokeWidth={2} />
                         </LineChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="p-6 bg-white rounded-lg shadow dark:bg-gray-800">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Daily Points Earned (Last Week)</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={dailyPointsData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(128,128,128,0.2)" />
+                            <XAxis dataKey="name" tick={{ fill: 'rgb(156 163 175)' }} />
+                            <YAxis tick={{ fill: 'rgb(156 163 175)' }} />
+                            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '0.5rem' }} />
+                            <Legend />
+                            <Bar dataKey="points" fill="#82ca9d" name="Total Points Earned" />
+                        </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>

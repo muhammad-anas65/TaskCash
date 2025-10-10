@@ -135,6 +135,7 @@ const UserDashboard = () => {
 };
 
 const UserTasks = () => {
+    const TASK_COOLDOWN_SECONDS = 10;
     const [filteredTasks, setFilteredTasks] = useState<Task[]>(tasks);
     const [activeCategory, setActiveCategory] = useState<TaskCategory | 'all'>('all');
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -142,6 +143,8 @@ const UserTasks = () => {
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [timeLeft, setTimeLeft] = useState(0);
     const [limitReached, setLimitReached] = useState(false);
+    const [cooldownActive, setCooldownActive] = useState(false);
+    const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
 
     useEffect(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -164,6 +167,11 @@ const UserTasks = () => {
 
     }, [activeCategory, sortOrder]);
 
+    const startCooldown = () => {
+        setCooldownActive(true);
+        setCooldownTimeLeft(TASK_COOLDOWN_SECONDS);
+    };
+
     useEffect(() => {
         if (activeTask && timeLeft > 0) {
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -173,8 +181,18 @@ const UserTasks = () => {
             updateUserPoints(activeTask.points * (user?.isPremium ? 2 : 1));
             alert(`Task "${activeTask.title}" completed! You earned ${activeTask.points * (user?.isPremium ? 2 : 1)} points.`);
             setActiveTask(null);
+            startCooldown();
         }
     }, [activeTask, timeLeft, updateUserPoints, user]);
+
+    useEffect(() => {
+        if (cooldownActive && cooldownTimeLeft > 0) {
+            const timer = setTimeout(() => setCooldownTimeLeft(prev => prev - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (cooldownActive && cooldownTimeLeft === 0) {
+            setCooldownActive(false);
+        }
+    }, [cooldownActive, cooldownTimeLeft]);
 
     const startTask = (task: Task) => {
         if(limitReached) {
@@ -197,6 +215,7 @@ const UserTasks = () => {
             updateUserPoints(task.points * (user?.isPremium ? 2 : 1));
             alert(`You earned ${task.points * (user?.isPremium ? 2 : 1)} points for starting the task "${task.title}".`);
             window.open(task.url, '_blank');
+            startCooldown();
         }
     };
 
@@ -222,6 +241,18 @@ const UserTasks = () => {
                      <p>You have completed all your tasks for today. Please come back tomorrow for more!</p>
                  </div>
              )}
+            
+            {cooldownActive && (
+                <div className="p-4 text-center text-indigo-800 bg-indigo-100 border-l-4 border-indigo-500 rounded-md dark:bg-indigo-900 dark:text-indigo-300">
+                    <div className="flex items-center justify-center">
+                        <Clock className="w-5 h-5 mr-2" />
+                        <div>
+                            <p className="font-bold">Task Cooldown</p>
+                            <p>Please wait <span className="font-mono">{cooldownTimeLeft}</span> seconds before starting your next task.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
              <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-white rounded-lg shadow dark:bg-gray-800">
                 <div className="flex items-center space-x-2">
@@ -246,7 +277,7 @@ const UserTasks = () => {
                  {filteredTasks.map(task => {
                      const isCompleted = user?.completedTaskIdsToday?.includes(task.id);
                      return (
-                         <div key={task.id} className={`flex flex-col justify-between p-6 bg-white rounded-lg shadow dark:bg-gray-800 transition-opacity ${limitReached || isCompleted ? 'opacity-60' : ''}`}>
+                         <div key={task.id} className={`flex flex-col justify-between p-6 bg-white rounded-lg shadow dark:bg-gray-800 transition-opacity ${limitReached || isCompleted || cooldownActive ? 'opacity-60' : ''}`}>
                             <div>
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="px-2 py-1 text-xs font-semibold text-blue-800 bg-blue-100 rounded-full dark:bg-blue-900 dark:text-blue-300">{task.category}</span>
@@ -266,7 +297,7 @@ const UserTasks = () => {
                             </div>
                             <button 
                                 onClick={() => startTask(task)} 
-                                disabled={limitReached || isCompleted} 
+                                disabled={limitReached || isCompleted || cooldownActive} 
                                 className={`flex items-center justify-center w-full px-4 py-2 mt-4 font-semibold text-white rounded-md transition-colors
                                     ${isCompleted 
                                         ? 'bg-green-600 cursor-not-allowed' 
@@ -536,7 +567,7 @@ const UserWallet = () => {
 };
 
 const UserReferrals = () => {
-    const { user, pointsPerReferral } = useAuth();
+    const { user, pointsPerReferral, referralBonus } = useAuth();
     const referralLink = `https://task.cash/ref/${user?.referralCode}`;
     
     const referralCount = user?.referralCount || 0;
@@ -592,7 +623,13 @@ const UserReferrals = () => {
 
             <div className="p-8 text-center bg-white rounded-lg shadow dark:bg-gray-800">
                  <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Invite Your Friends</h2>
-                 <p className="mt-2 text-gray-600 dark:text-gray-400">Share your referral link and earn points for every friend who signs up!</p>
+                 <p className="mt-2 text-gray-600 dark:text-gray-400">Share your referral link and earn <span className="font-bold">{pointsPerReferral} points</span> for every friend who signs up!</p>
+                 
+                 <div className="inline-flex items-center justify-center w-auto gap-3 px-4 py-3 mt-4 text-sm font-semibold border rounded-lg bg-primary-50 border-primary-200 text-primary-800 dark:bg-primary-900/20 dark:border-primary-500/30 dark:text-primary-300">
+                    <Gift className="flex-shrink-0 w-6 h-6" />
+                    <span>Daily Bonus: Refer <span className="font-bold">{referralBonus.referralsNeeded}</span> friends today to earn an extra <span className="font-bold">{referralBonus.bonusPoints.toLocaleString()}</span> points!</span>
+                </div>
+
                  <div className="flex justify-center mt-6">
                     <div className="flex w-full max-w-md rounded-md shadow-sm">
                         <input type="text" readOnly value={referralLink} className="flex-1 block w-full min-w-0 px-4 py-2 text-center text-gray-700 bg-gray-100 border border-gray-300 rounded-none rounded-l-md dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300 focus:ring-primary-500 focus:border-primary-500" />
